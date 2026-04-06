@@ -1,0 +1,82 @@
+# RUDP Network Simulator Presentation Content
+This content is formatted for an AI Text-to-PPT Maker.
+
+## Abstract
+The Reliable User Datagram Protocol (RUDP) Network Simulator is a powerful, interactive visual dashboard built to demonstrate and compare the performance characteristics of RUDP against traditional TCP and UDP protocols. By leveraging modern web technologies (Next.js, TypeScript, React Flow), the simulator models a dynamic mesh topology where nodes exchange data under customizable, adverse network conditions such as elevated latency, jitter, and packet loss. The core of this system is a custom TypeScript port of a C-based RUDP protocol, implementing sequence numbers, XOR checksums, and Stop-and-Wait ARQ to guarantee reliability over an inherently unreliable transport baseline. This project proves RUDP's specialized advantages in low-overhead reliable data transfer compared to connection-heavy TCP and connectionless UDP paradigms.
+
+---
+## Slide 1: Title Slide
+- Title: Reliable UDP (RUDP) Network Simulator
+- Subtitle: Interactive Protocol Modeling & Topology Visualization
+- Presenter: [Name]
+- Goal: Demonstrating custom protocol reliability under simulated extreme network adversity.
+
+## Slide 2: Introduction to Transport Protocols
+- Key topic: The limitations of traditional transport protocols.
+- TCP (Transmission Control Protocol): Reliable, connection-oriented, high overhead (3-way handshake), head-of-line blocking.
+- UDP (User Datagram Protocol): Unreliable, connectionless, low overhead, no guarantees on delivery, order, or integrity.
+- The Gap: Applications requiring reliability without the massive overhead of TCP (e.g., streaming, specialized telemetry, gaming).
+
+## Slide 3: Introduction to RUDP
+- Key topic: What is Reliable User Datagram Protocol (RUDP)?
+- RUDP bridges the gap by layering specific reliability mechanisms over standard UDP.
+- Minimal overhead but guarantees data integrity and delivery.
+- Uses XOR checksums for data integrity verification.
+- Uses Sequence and Acknowledgment numbers for tracking.
+- Uses Stop-and-Wait Automatic Repeat reQuest (ARQ) for packet retransmission.
+
+## Slide 4: Project Objectives
+- Key topic: Why build a custom simulator?
+- To visually demonstrate network routing and protocol behavior hop-by-hop.
+- To compare TCP, UDP, and RUDP in identical, constrained network environments.
+- To prove that RUDP can dynamically handle adverse network congestion (latency, dropped traffic) with lower overhead than TCP.
+- To provide a real-time, interactive environment for testing payload optimization.
+
+## Slide 5: System Architecture & Tech Stack
+- Frontend Dashboard: Next.js 15 (App Router), React 19.
+- Interactive Topology: React Flow for dynamic drag-and-drop node graph mesh routing.
+- State Management: Zustand for orchestrating high-frequency packet state, active connections, and animated events.
+- Styling: Tailwind CSS ensuring a high-density, professional "dark mode" SaaS-grade interface.
+- Core Engine: Pure TypeScript implementation of the RUDP state machine and network simulator.
+
+## Slide 6: The RUDP Core Engine
+- Translating low-level C logic to strict TypeScript.
+- Header Structure: SYN, ACK, DATA, FIN flags dynamically computed via bitwise operations.
+- Data Integrity check utilizing a custom XOR algorithmic implementation.
+- ARQ Logic: Custom timeouts and exponential retries allowing resilient retransmissions when packets vanish in transit.
+- Session Management: Tracking connection states from CLOSED -> SYN_SENT -> ESTABLISHED.
+
+## Slide 7: Network Simulation Model
+- Abstracting real-world conditions into the simulator.
+- Programmable Latency (e.g., 100ms baseline delays).
+- Simulated Jitter (variable fluctuations in RTT).
+- Packet Loss Injection dynamically killing packets in mid-flight based on probability (e.g., 30% drop rate).
+- Shortest-path routing using BFS (Breadth-First Search) across dynamically generated topologies.
+
+## Slide 8: The Interactive Dashboard
+- Deep dive into the user interface.
+- Canvas Graph: Visually draws nodes and sends packets (data, ACKs, handshakes) traveling across straight interconnects.
+- Inspector Panel: Wireshark-style capture table showing exact dispatch times, flags, sequences, and payload sizes.
+- Real-Time Telemetry: Sparklines analyzing rolling average latency, throughput Bps, and drop percentages.
+- Live Controls: Network Congestion sliders and auto-send payload limits for instant stress testing.
+
+## Slide 9: Comparing Performance Results
+- Live testing highlights when varying congestion models.
+- UDP: Blistering fast, but data corruption and extreme loss at 20%+ network drop rates.
+- TCP: Guaranteed delivery but heavily impacted by handshake delays and retransmission backoff cascades.
+- RUDP: Ideal balance; handles drops efficiently via Stop-and-Wait ARQ with a lower initial handshake burden than TCP.
+
+## Slide 10: Conclusion & Future Scope
+- The simulator successfully acts as an educational and proving ground for proprietary networking layers.
+- Validates the efficiency of RUDP in lossy, jitter-prone edge networks.
+- Future Scope:
+  - Replacing Stop-and-Wait with Sliding Window / Go-Back-N protocols.
+  - Introducing dynamic congestion control (e.g., mimicking TCP Tahoe/Reno logic).
+  - Porting the simulation engine to WebSockets for real machine-to-machine tests.
+
+## Slide 11: References
+- Postel, J. (1981). "User Datagram Protocol". RFC 768.
+- Bova, T., & Krivoruchka, T. (1999). "Reliable UDP Protocol". Internet Draft.
+- React Flow Documentation - https://reactflow.dev/
+- Next.js Documentation - https://nextjs.org/
+- Original C implementation source code basis.

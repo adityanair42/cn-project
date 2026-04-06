@@ -2,17 +2,18 @@
 
 import React, { useMemo } from 'react';
 import { useSimulatorStore } from '@/store/simulator-store';
-import { flagsToString } from '@/lib/protocol/rudp-engine';
+import { PacketEvent } from '@/lib/protocol/types';
 
-function MiniSparkline({ data, color, w = 80, h = 20 }: { data: number[]; color: string; w?: number; h?: number }) {
-  if (data.length < 2) return <div style={{ width: w, height: h }} />;
+function MiniWaveformLine({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return <div style={{ height: 32, flex: 1, display: 'flex', alignItems: 'center', fontSize: 10, color: '#4b5563' }}>Generating waveform...</div>;
   const max = Math.max(...data, 1);
-  const min = Math.min(...data, 0);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * (h - 2)}`).join(' ');
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * 140},${32 - (v / max) * 32}`).join(' ');
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+    <svg width="140" height="32" viewBox="0 0 140 32" style={{ flexShrink: 0 }}>
+      {/* Background fill */}
+      <polygon points={`0,32 ${pts} 140,32`} fill={`${color}20`} />
+      {/* Stroke line */}
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -21,92 +22,110 @@ export function BottomPanel() {
   const nodes = useSimulatorStore((s) => s.nodes);
   const links = useSimulatorStore((s) => s.links);
   const packetLog = useSimulatorStore((s) => s.packetLog);
-  const isRunning = useSimulatorStore((s) => s.isRunning);
   const activeProtocol = useSimulatorStore((s) => s.activeProtocol);
   const config = useSimulatorStore((s) => s.config);
-  const animatedPackets = useSimulatorStore((s) => s.animatedPackets);
 
   const stats = useMemo(() => {
     const sent = nodes.reduce((a, n) => a + n.metrics.packetsSent, 0);
-    const recv = nodes.reduce((a, n) => a + n.metrics.packetsReceived, 0);
-    const dropped = nodes.reduce((a, n) => a + n.metrics.packetsDropped, 0);
+    const drop = nodes.reduce((a, n) => a + n.metrics.packetsDropped, 0);
     const retx = nodes.reduce((a, n) => a + n.metrics.packetsRetransmitted, 0);
-    const bytes = nodes.reduce((a, n) => a + n.metrics.bytesTransferred, 0);
-    const active = nodes.filter(n => n.metrics.avgLatencyMs > 0);
-    const avgLat = active.length > 0 ? active.reduce((a, n) => a + n.metrics.avgLatencyMs, 0) / active.length : 0;
-    const loss = sent > 0 ? (dropped / sent * 100) : 0;
-    const latencies = packetLog.filter(p => p.direction === 'received' && p.latencyMs).slice(0, 20).map(p => p.latencyMs!).reverse();
-    const throughput = packetLog.filter(p => p.direction === 'sent').slice(0, 20).map(p => p.payloadLen).reverse();
+    
+    // Header overhead per packet is 32 bytes (mock RUDP/TCP framing)
+    const protocolBytesTotal = nodes.reduce((a, n) => a + n.metrics.bytesTransferred, 0);
+    const payloadBytesTotal = protocolBytesTotal - (sent * 32); 
+    const overheadPercent = protocolBytesTotal > 0 ? ((sent * 32) / protocolBytesTotal * 100).toFixed(1) : '0.0';
+    const retxRatio = sent > 0 ? ((retx / sent) * 100).toFixed(1) : '0.0';
 
-    return { sent, recv, dropped, retx, bytes, avgLat, loss, latencies, throughput };
+    // Calculate throughput over time to draw the actual wave
+    const now = Date.now();
+    const buckets = new Array(25).fill(0); // 25 buckets of 500ms
+    
+    packetLog.forEach((p) => {
+       if (p.direction === 'received') {
+          const ageMs = now - p.timestamp;
+          const bucketIndex = Math.floor(ageMs / 500); // which 500ms segment?
+          if (bucketIndex >= 0 && bucketIndex < 25) {
+             buckets[bucketIndex] += p.payloadLen; // Add payload bytes to that bucket
+          }
+       }
+    });
+
+    const throughputWaveform = buckets.reverse(); // oldest to newest left to right
+    const currentGoodput = throughputWaveform[throughputWaveform.length - 1]; // last roughly 500ms chunk
+    const currentTPS = packetLog.filter(p => p.direction === 'sent' && (now - p.timestamp) < 1000).length;
+
+    return { 
+      payloadBytesTotal, overheadPercent, retxRatio, currentGoodput: currentGoodput * 2, // scale to per-second approx
+      throughputWaveform, currentTPS
+    };
   }, [nodes, packetLog]);
 
-  const lastEvents = packetLog.slice(0, 3);
-
   return (
-    <div style={{ background: '#0f1117', borderTop: '1px solid #1e2030', padding: '8px 16px', display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0 }}>
-      <div className="flex items-center gap-2" style={{ marginRight: 8 }}>
-        <div className={isRunning ? 'animate-pulse' : ''} style={{ width: 6, height: 6, borderRadius: '50%', background: isRunning ? '#22c55e' : '#2a2d3e' }} />
-        <span style={{ fontSize: 11, fontWeight: 600, color: isRunning ? '#22c55e' : '#4b5563' }}>
-          {isRunning ? 'LIVE' : 'IDLE'}
-        </span>
+    <div style={{ background: '#0a0d14', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header Readout */}
+      <div className="flex items-center justify-between" style={{ padding: '8px 20px', borderBottom: '1px solid #1e2030', background: '#0d1017' }}>
+         <div className="flex items-center gap-4">
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', letterSpacing: '0.05em' }}>{activeProtocol.toUpperCase()} MODE</span>
+            <span style={{ fontSize: 11, color: '#6b7280', fontFamily: 'var(--font-mono)' }}>Network Engine Active</span>
+         </div>
+         <div className="flex items-center gap-4">
+            <span style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Active Nodes</span>
+            <span style={{ fontSize: 11, color: '#e5e7eb', fontFamily: 'var(--font-mono)' }}>{nodes.length}</span>
+            <div style={{ width: 1, height: 12, background: '#252836' }} />
+            <span style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Env Config</span>
+            <span style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'var(--font-mono)' }}>{config.latencyMs.toFixed(0)}ms Del / {config.packetLossPercent.toFixed(1)}% Loss</span>
+         </div>
       </div>
 
-      <div style={{ width: 1, height: 24, background: '#1e2030' }} />
+      {/* Wrapping metrics dashboard grid */}
+      <div className="flex-1 overflow-y-auto" style={{ padding: 20 }}>
+         <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
 
-      {[
-        { label: 'Protocol', value: activeProtocol.toUpperCase(), color: '#3b82f6' },
-        { label: 'Nodes', value: String(nodes.length), color: '#6b7280' },
-        { label: 'Links', value: String(links.length), color: '#6b7280' },
-        { label: 'In Flight', value: String(animatedPackets.length), color: animatedPackets.length > 0 ? '#2dd4bf' : '#4b5563' },
-      ].map((item) => (
-        <div key={item.label} className="flex items-center gap-1.5">
-          <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</span>
-          <span style={{ fontSize: 12, color: item.color, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{item.value}</span>
-        </div>
-      ))}
+            {/* Throughput Analyzer */}
+            <div style={{ background: '#141722', borderRadius: 12, border: '1px solid #1e2233', padding: 16 }}>
+               <div className="flex justify-between" style={{ marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Realtime Throughput</span>
+                  <span style={{ fontSize: 16, color: '#e5e7eb', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                     {(stats.currentGoodput / 1024).toFixed(1)} KB/s
+                  </span>
+               </div>
+               <div className="flex items-end gap-3 w-full">
+                  <MiniWaveformLine data={stats.throughputWaveform} color={activeProtocol === 'tcp' ? '#22c55e' : activeProtocol === 'udp' ? '#f59e0b' : '#3b82f6'} />
+               </div>
+               <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 8, lineHeight: 1.4 }}>Displays successful delivery volume over recent time slices. TCP under loss demonstrates "sawtooth" congestion waving via geometric backoff. UDP remains flatline regardless of drops.</div>
+            </div>
 
-      <div style={{ width: 1, height: 24, background: '#1e2030' }} />
+            {/* Protocol Efficiency Stats */}
+            <div style={{ background: '#141722', borderRadius: 12, border: '1px solid #1e2233', padding: 16 }}>
+               <span style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 16 }}>Data Efficiency & Retx</span>
+               
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                     <div style={{ fontSize: 24, color: '#ef4444', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{stats.retxRatio}%</div>
+                     <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase' }}>Retransmission Ratio</div>
+                  </div>
+                  <div>
+                     <div style={{ fontSize: 24, color: '#a78bfa', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{stats.overheadPercent}%</div>
+                     <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase' }}>Header Overhead</div>
+                  </div>
+               </div>
+            </div>
 
-      {[
-        { label: 'Sent', val: stats.sent, color: '#3b82f6' },
-        { label: 'Recv', val: stats.recv, color: '#22c55e' },
-        { label: 'Drop', val: stats.dropped, color: '#ef4444' },
-        { label: 'Retx', val: stats.retx, color: '#f59e0b' },
-      ].map((s) => (
-        <div key={s.label} className="flex items-center gap-1">
-          <div style={{ width: 5, height: 5, borderRadius: '50%', background: s.color, opacity: 0.7 }} />
-          <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600 }}>{s.label}</span>
-          <span style={{ fontSize: 12, color: '#9ca3af', fontWeight: 700, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{s.val}</span>
-        </div>
-      ))}
+            {/* Traffic Velocity */}
+            <div style={{ background: '#141722', borderRadius: 12, border: '1px solid #1e2233', padding: 16 }}>
+               <span style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 16 }}>Network Saturation</span>
+               
+               <div className="flex items-center justify-between" style={{ borderBottom: '1px solid #1e2030', paddingBottom: 8, marginBottom: 8 }}>
+                   <span style={{ fontSize: 11, color: '#9ca3af' }}>Current Trx/Sec</span>
+                   <span style={{ fontSize: 12, color: '#2dd4bf', fontFamily: 'var(--font-mono)' }}>{stats.currentTPS} req/s</span>
+               </div>
+               <div className="flex items-center justify-between">
+                   <span style={{ fontSize: 11, color: '#9ca3af' }}>Active Logical Links</span>
+                   <span style={{ fontSize: 12, color: '#e5e7eb', fontFamily: 'var(--font-mono)' }}>{links.length}</span>
+               </div>
+            </div>
 
-      <div style={{ width: 1, height: 24, background: '#1e2030' }} />
-
-      <div className="flex items-center gap-1.5">
-        <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase' }}>Latency</span>
-        <MiniSparkline data={stats.latencies} color="#2dd4bf" />
-        <span style={{ fontSize: 11, color: '#2dd4bf', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{stats.avgLat.toFixed(0)}ms</span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase' }}>Throughput</span>
-        <MiniSparkline data={stats.throughput} color="#3b82f6" />
-        <span style={{ fontSize: 11, color: '#3b82f6', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-          {stats.bytes > 1024 ? `${(stats.bytes / 1024).toFixed(1)}KB` : `${stats.bytes}B`}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase' }}>Loss</span>
-        <span style={{ fontSize: 11, color: stats.loss > 10 ? '#ef4444' : '#6b7280', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{stats.loss.toFixed(1)}%</span>
-      </div>
-
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-3">
-        <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase' }}>Sim</span>
-        <span style={{ fontSize: 10, color: '#6b7280', fontFamily: 'var(--font-mono)' }}>{config.latencyMs}ms/{config.jitterMs}ms/{config.packetLossPercent}%</span>
+         </div>
       </div>
     </div>
   );

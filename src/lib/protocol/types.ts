@@ -7,7 +7,7 @@ export const FLAG_DATA = 0x04;
 export const FLAG_FIN  = 0x08;
 export const FLAG_NACK = 0x10;
 
-export type ProtocolMode = 'rudp' | 'tcp' | 'udp' | 'adaptive';
+export type ProtocolMode = 'rudp' | 'tcp' | 'udp';
 
 export interface RUDPHeader {
   flags: number;

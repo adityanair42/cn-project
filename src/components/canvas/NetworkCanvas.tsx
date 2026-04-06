@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import {
-  ReactFlow, Background, Controls, MiniMap,
+  ReactFlow, Background, Controls,
   type Connection, type Node, type Edge,
   BackgroundVariant, Panel,
   type NodeChange,
@@ -69,9 +69,8 @@ export function NetworkCanvas() {
           className="!bg-[#141720] !border-[#252a3a] !rounded-lg [&>button]:!bg-[#1a1e2e] [&>button]:!border-[#252a3a] [&>button]:!text-[#4b5563] [&>button:hover]:!bg-[#252a3a] [&>button:hover]:!text-[#9ca3af]"
           showInteractive={false}
         />
-        <MiniMap className="!bg-[#0f1117] !border-[#252a3a] !rounded-lg" nodeColor="#4285f4" maskColor="#0a0c10cc" />
         <Panel position="bottom-center">
-          <div style={{ fontSize: 11, color: '#3a3f52', fontFamily: 'var(--font-mono)', background: '#0a0c10cc', padding: '4px 14px', borderRadius: 20, border: '1px solid #1e203050' }}>
+          <div style={{ fontSize: 11, color: '#3a3f52', fontFamily: 'var(--font-mono)', background: '#0a0c10cc', padding: '4px 14px', borderRadius: 20, border: '1px solid #1e203050', backdropFilter: 'blur(4px)' }}>
             double-click to add · drag handles to connect
           </div>
         </Panel>

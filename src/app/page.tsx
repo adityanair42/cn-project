@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { NetworkCanvas } from '@/components/canvas/NetworkCanvas';
 import { InspectorPanel } from '@/components/panel/InspectorPanel';
 import { BottomPanel } from '@/components/panel/BottomPanel';
@@ -8,7 +9,7 @@ import { Toolbar } from '@/components/controls/Toolbar';
 import { useSimulatorStore } from '@/store/simulator-store';
 
 export default function SimulatorPage() {
-  const { nodes, links, addNode, addLink, packetLog, isRunning, animatedPackets } = useSimulatorStore();
+  const { nodes, addNode, addLink, animatedPackets } = useSimulatorStore();
 
   useEffect(() => {
     if (nodes.length === 0) {
@@ -37,16 +38,39 @@ export default function SimulatorPage() {
   return (
     <div className="flex flex-col h-screen w-screen" style={{ background: '#0a0c10' }}>
       <Toolbar />
-      <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-          <div className="flex-1 relative" style={{ background: '#0d0f14' }}>
-            <NetworkCanvas />
-          </div>
-          <BottomPanel />
-        </div>
-        <div style={{ width: 380, flexShrink: 0 }}>
-          <InspectorPanel />
-        </div>
+      <div className="flex-1 w-full" style={{ minHeight: 0 }}>
+        <PanelGroup orientation="horizontal">
+          {/* LEFT SECTION (Canvas + Bottom Panel) */}
+          <Panel defaultSize={75} minSize={50}>
+            <PanelGroup orientation="vertical">
+              {/* TOP: CANVAS */}
+              <Panel defaultSize={80} minSize={40} className="relative" style={{ background: '#0d0f14' }}>
+                <NetworkCanvas />
+              </Panel>
+
+              {/* VERTICAL DRAGGER */}
+              <PanelResizeHandle className="flex items-center justify-center transition-colors" style={{ height: 6, background: '#1e2030', cursor: 'row-resize', borderTop: '1px solid #141720', borderBottom: '1px solid #141720' }}>
+                <div style={{ width: 40, height: 2, background: '#4b5563', borderRadius: 2 }} />
+              </PanelResizeHandle>
+
+              {/* BOTTOM: TELEMETRY/STATUS */}
+              <Panel defaultSize={20} minSize={10} style={{ minHeight: 80, overflow: 'hidden' }}>
+                <BottomPanel />
+              </Panel>
+            </PanelGroup>
+          </Panel>
+
+          {/* HORIZONTAL DRAGGER */}
+          <PanelResizeHandle className="flex items-center justify-center transition-colors hover:bg-[#2a2d3e]" style={{ width: 6, background: '#1e2030', cursor: 'col-resize', borderLeft: '1px solid #141720', borderRight: '1px solid #141720' }}>
+            <div style={{ height: 40, width: 2, background: '#4b5563', borderRadius: 2 }} />
+          </PanelResizeHandle>
+
+          {/* RIGHT SECTION (Inspector) */}
+          <Panel defaultSize={25} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <InspectorPanel />
+          </Panel>
+
+        </PanelGroup>
       </div>
     </div>
   );
