@@ -18,8 +18,17 @@ html, body {
 
 .react-flow__pane { cursor: default !important; }
 .react-flow__node { cursor: pointer !important; }
-.react-flow__handle { cursor: crosshair !important; }
 .react-flow__background { background: transparent !important; }
+
+.react-flow__handle {
+  opacity: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border: none !important;
+  background: none !important;
+}
 
 input[type="range"] {
   -webkit-appearance: none;

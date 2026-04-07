@@ -6,9 +6,7 @@ import {
 } from './types';
 import { calculateChecksum, verifyChecksum } from './checksum';
 
-function makePacketId(): string {
-  return uuidv4().slice(0, 8);
-}
+function makePacketId(): string { return uuidv4().slice(0, 8); }
 
 function emptyHeader(): RUDPHeader {
   return { flags: 0, seqNum: 0, ackNum: 0, checksum: 0, payloadLen: 0, timestamp: Date.now() };
@@ -29,11 +27,7 @@ export function createAckPacket(ackNum: number = 0): RUDPPacket {
 export function createDataPacket(seqNum: number, payload: string): RUDPPacket {
   const payloadLen = payload.length;
   const checksum = calculateChecksum(payload, payloadLen);
-  return {
-    id: makePacketId(),
-    header: { ...emptyHeader(), flags: FLAG_DATA, seqNum, payloadLen, checksum },
-    payload,
-  };
+  return { id: makePacketId(), header: { ...emptyHeader(), flags: FLAG_DATA, seqNum, payloadLen, checksum }, payload };
 }
 
 export function createFinPacket(): RUDPPacket {
@@ -67,17 +61,9 @@ export interface RUDPSession {
 
 export function createSession(sourceNodeId: string, targetNodeId: string): RUDPSession {
   return {
-    connectionId: uuidv4(),
-    sourceNodeId, targetNodeId,
-    state: 'CLOSED',
-    localSeqNum: 1,
-    expectedSeqNum: 1,
-    retransmitCount: 0,
-    maxRetransmits: 5,
-    timeoutMs: TIMEOUT_MS,
-    pendingPacket: null,
-    rttSamples: [],
-    avgRtt: 0,
+    connectionId: uuidv4(), sourceNodeId, targetNodeId, state: 'CLOSED',
+    localSeqNum: 1, expectedSeqNum: 1, retransmitCount: 0, maxRetransmits: 5,
+    timeoutMs: TIMEOUT_MS, pendingPacket: null, rttSamples: [], avgRtt: 0,
   };
 }
 
@@ -96,8 +82,7 @@ export function createPacketEvent(
 }
 
 export function initiateHandshake(session: RUDPSession): { session: RUDPSession; packetToSend: RUDPPacket } {
-  const synPacket = createSynPacket(session.sourceNodeId, session.targetNodeId);
-  return { session: { ...session, state: 'SYN_SENT' }, packetToSend: synPacket };
+  return { session: { ...session, state: 'SYN_SENT' }, packetToSend: createSynPacket(session.sourceNodeId, session.targetNodeId) };
 }
 
 export function handleReceivedPacket(session: RUDPSession, packet: RUDPPacket): {
@@ -151,10 +136,7 @@ export function handleReceivedPacket(session: RUDPSession, packet: RUDPPacket): 
 
 export function prepareDataSend(session: RUDPSession, payload: string): { session: RUDPSession; packet: RUDPPacket } {
   const packet = createDataPacket(session.localSeqNum, payload);
-  return {
-    session: { ...session, localSeqNum: session.localSeqNum + 1, pendingPacket: packet, retransmitCount: 0 },
-    packet,
-  };
+  return { session: { ...session, localSeqNum: session.localSeqNum + 1, pendingPacket: packet, retransmitCount: 0 }, packet };
 }
 
 export function handleTimeout(session: RUDPSession): { session: RUDPSession; retransmitPacket: RUDPPacket | null; giveUp: boolean } {
@@ -163,8 +145,7 @@ export function handleTimeout(session: RUDPSession): { session: RUDPSession; ret
     return { session: { ...session, pendingPacket: null, retransmitCount: 0 }, retransmitPacket: null, giveUp: true };
   }
   const retransmit: RUDPPacket = {
-    ...session.pendingPacket,
-    id: makePacketId(),
+    ...session.pendingPacket, id: makePacketId(),
     header: { ...session.pendingPacket.header, timestamp: Date.now() },
   };
   return { session: { ...session, retransmitCount: session.retransmitCount + 1 }, retransmitPacket: retransmit, giveUp: false };

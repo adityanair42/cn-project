@@ -32,7 +32,7 @@ export function ConnectionLog() {
         {logs.length === 0 ? (
           <div className="flex items-center justify-center" style={{ height: 80, fontSize: 12, color: '#2a2d3e' }}>No events yet</div>
         ) : (
-          logs.map((log) => {
+          logs.slice(0, 150).map((log) => {
             const lv = levels[log.level] || levels.info;
             const t = new Date(log.timestamp);
             const ts = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}.${String(t.getMilliseconds()).padStart(3, '0')}`;

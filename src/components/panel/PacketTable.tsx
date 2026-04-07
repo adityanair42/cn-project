@@ -54,7 +54,7 @@ export function PacketTable() {
         {packetLog.length === 0 ? (
           <div className="flex items-center justify-center" style={{ height: 120, fontSize: 12, color: '#2a2d3e' }}>No packets captured yet</div>
         ) : (
-          packetLog.map((pkt, idx) => {
+          packetLog.slice(0, 150).map((pkt, idx) => {
             const ds = directionStyles[pkt.direction];
             return (
               <div

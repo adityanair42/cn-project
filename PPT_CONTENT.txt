@@ -1,82 +1,148 @@
-# RUDP Network Simulator Presentation Content
-This content is formatted for an AI Text-to-PPT Maker.
+Slide 1: Title Slide
 
-## Abstract
-The Reliable User Datagram Protocol (RUDP) Network Simulator is a powerful, interactive visual dashboard built to demonstrate and compare the performance characteristics of RUDP against traditional TCP and UDP protocols. By leveraging modern web technologies (Next.js, TypeScript, React Flow), the simulator models a dynamic mesh topology where nodes exchange data under customizable, adverse network conditions such as elevated latency, jitter, and packet loss. The core of this system is a custom TypeScript port of a C-based RUDP protocol, implementing sequence numbers, XOR checksums, and Stop-and-Wait ARQ to guarantee reliability over an inherently unreliable transport baseline. This project proves RUDP's specialized advantages in low-overhead reliable data transfer compared to connection-heavy TCP and connectionless UDP paradigms.
+Title: RUDP — Reliable User Datagram Protocol
+Subtitle: A Custom Transport Layer Protocol with Interactive Network Simulation
+Course: Computer Networks
 
----
-## Slide 1: Title Slide
-- Title: Reliable UDP (RUDP) Network Simulator
-- Subtitle: Interactive Protocol Modeling & Topology Visualization
-- Presenter: [Name]
-- Goal: Demonstrating custom protocol reliability under simulated extreme network adversity.
 
-## Slide 2: Introduction to Transport Protocols
-- Key topic: The limitations of traditional transport protocols.
-- TCP (Transmission Control Protocol): Reliable, connection-oriented, high overhead (3-way handshake), head-of-line blocking.
-- UDP (User Datagram Protocol): Unreliable, connectionless, low overhead, no guarantees on delivery, order, or integrity.
-- The Gap: Applications requiring reliability without the massive overhead of TCP (e.g., streaming, specialized telemetry, gaming).
+Slide 2: Abstract
 
-## Slide 3: Introduction to RUDP
-- Key topic: What is Reliable User Datagram Protocol (RUDP)?
-- RUDP bridges the gap by layering specific reliability mechanisms over standard UDP.
-- Minimal overhead but guarantees data integrity and delivery.
-- Uses XOR checksums for data integrity verification.
-- Uses Sequence and Acknowledgment numbers for tracking.
-- Uses Stop-and-Wait Automatic Repeat reQuest (ARQ) for packet retransmission.
+Transport layer protocols form the backbone of internet communication. TCP provides reliability at the cost of performance, while UDP offers speed but sacrifices data integrity. This project presents RUDP (Reliable User Datagram Protocol), a custom transport protocol that combines the low overhead of UDP with selective reliability mechanisms including XOR checksums, sequence numbering, and Stop-and-Wait ARQ retransmission. We developed both the protocol specification in C and a fully interactive browser-based network simulator in TypeScript that allows real-time visual comparison of TCP, UDP, and RUDP under configurable adverse network conditions. Our results demonstrate that RUDP maintains significantly higher throughput than TCP under packet loss while preserving data delivery guarantees that UDP cannot offer.
 
-## Slide 4: Project Objectives
-- Key topic: Why build a custom simulator?
-- To visually demonstrate network routing and protocol behavior hop-by-hop.
-- To compare TCP, UDP, and RUDP in identical, constrained network environments.
-- To prove that RUDP can dynamically handle adverse network congestion (latency, dropped traffic) with lower overhead than TCP.
-- To provide a real-time, interactive environment for testing payload optimization.
 
-## Slide 5: System Architecture & Tech Stack
-- Frontend Dashboard: Next.js 15 (App Router), React 19.
-- Interactive Topology: React Flow for dynamic drag-and-drop node graph mesh routing.
-- State Management: Zustand for orchestrating high-frequency packet state, active connections, and animated events.
-- Styling: Tailwind CSS ensuring a high-density, professional "dark mode" SaaS-grade interface.
-- Core Engine: Pure TypeScript implementation of the RUDP state machine and network simulator.
+Slide 3: Problem Statement
 
-## Slide 6: The RUDP Core Engine
-- Translating low-level C logic to strict TypeScript.
-- Header Structure: SYN, ACK, DATA, FIN flags dynamically computed via bitwise operations.
-- Data Integrity check utilizing a custom XOR algorithmic implementation.
-- ARQ Logic: Custom timeouts and exponential retries allowing resilient retransmissions when packets vanish in transit.
-- Session Management: Tracking connection states from CLOSED -> SYN_SENT -> ESTABLISHED.
+Traditional transport protocols present a fundamental trade-off:
 
-## Slide 7: Network Simulation Model
-- Abstracting real-world conditions into the simulator.
-- Programmable Latency (e.g., 100ms baseline delays).
-- Simulated Jitter (variable fluctuations in RTT).
-- Packet Loss Injection dynamically killing packets in mid-flight based on probability (e.g., 30% drop rate).
-- Shortest-path routing using BFS (Breadth-First Search) across dynamically generated topologies.
+TCP (Transmission Control Protocol):
+- Guarantees reliable, ordered delivery
+- Requires a 3-way handshake (SYN, SYN-ACK, ACK) before any data transfer
+- Implements congestion control that aggressively halves transmission rate upon detecting packet loss
+- Result: Under lossy network conditions, TCP throughput collapses into a "sawtooth" pattern as it repeatedly backs off and slowly recovers
 
-## Slide 8: The Interactive Dashboard
-- Deep dive into the user interface.
-- Canvas Graph: Visually draws nodes and sends packets (data, ACKs, handshakes) traveling across straight interconnects.
-- Inspector Panel: Wireshark-style capture table showing exact dispatch times, flags, sequences, and payload sizes.
-- Real-Time Telemetry: Sparklines analyzing rolling average latency, throughput Bps, and drop percentages.
-- Live Controls: Network Congestion sliders and auto-send payload limits for instant stress testing.
+UDP (User Datagram Protocol):
+- Zero connection overhead, immediate data transmission
+- No acknowledgments, no retransmission, no ordering guarantees
+- Maintains constant throughput regardless of network conditions
+- Result: Fast, but dropped packets are permanently lost — unacceptable for applications requiring data integrity
 
-## Slide 9: Comparing Performance Results
-- Live testing highlights when varying congestion models.
-- UDP: Blistering fast, but data corruption and extreme loss at 20%+ network drop rates.
-- TCP: Guaranteed delivery but heavily impacted by handshake delays and retransmission backoff cascades.
-- RUDP: Ideal balance; handles drops efficiently via Stop-and-Wait ARQ with a lower initial handshake burden than TCP.
+The gap: Many real-world applications (gaming, IoT telemetry, live streaming, sensor networks) need reliability without TCP's heavy congestion penalties.
 
-## Slide 10: Conclusion & Future Scope
-- The simulator successfully acts as an educational and proving ground for proprietary networking layers.
-- Validates the efficiency of RUDP in lossy, jitter-prone edge networks.
-- Future Scope:
-  - Replacing Stop-and-Wait with Sliding Window / Go-Back-N protocols.
-  - Introducing dynamic congestion control (e.g., mimicking TCP Tahoe/Reno logic).
-  - Porting the simulation engine to WebSockets for real machine-to-machine tests.
 
-## Slide 11: References
-- Postel, J. (1981). "User Datagram Protocol". RFC 768.
-- Bova, T., & Krivoruchka, T. (1999). "Reliable UDP Protocol". Internet Draft.
-- React Flow Documentation - https://reactflow.dev/
-- Next.js Documentation - https://nextjs.org/
-- Original C implementation source code basis.
+Slide 4: Proposed Solution — RUDP
+
+RUDP layers targeted reliability mechanisms directly on top of UDP's lightweight transport:
+
+1. XOR Checksum Verification: Each packet header carries a checksum computed by XORing every byte of the payload. The receiver independently recomputes the checksum and rejects corrupted packets.
+
+2. Sequence and Acknowledgment Numbers: Every DATA packet carries a sequence number. The receiver tracks expected sequences to detect duplicates and ensure ordering. ACK packets reference the sequence being acknowledged.
+
+3. Stop-and-Wait ARQ (Automatic Repeat reQuest): After sending a DATA packet, the sender waits for an ACK. If no ACK arrives within the timeout window, the sender retransmits that specific packet. Unlike TCP, RUDP does not reduce its transmission rate on retransmission — it simply resends and continues at full speed.
+
+4. Bitwise Flag System: Packet type is encoded in a flags byte using bitwise OR — SYN (0x01), ACK (0x02), DATA (0x04), FIN (0x08) — allowing compound types like SYN+ACK (0x03).
+
+
+Slide 5: System Architecture
+
+The project has two major components:
+
+Component 1 — C Reference Implementation:
+- rudp.h: Defines the RUDP_Header struct (flags, seq_num, ack_num, checksum, payload_length) and the calculate_checksum function
+- client.c: Implements the sender side — connection initiation via 3-way handshake, data segmentation, and retransmission on timeout
+- server.c: Implements the receiver side — checksum verification, duplicate detection, and ACK generation
+
+Component 2 — Interactive Web Simulator:
+- Built with Next.js, TypeScript, React Flow, and Zustand
+- The C protocol logic was manually ported to TypeScript to run entirely in the browser
+- Simulates network conditions (latency, jitter, packet loss) using configurable random injection
+- Visualizes packet flow across a dynamic mesh topology with real-time animated packet dots traveling between nodes
+- Provides Wireshark-style packet capture, throughput waveform charts, and protocol efficiency dashboards
+
+
+Slide 6: Network Simulation Model
+
+The simulator models real-world network impairments through three configurable parameters:
+
+Latency: Base one-way delay applied to every packet (configurable from 10ms to 500ms). Simulates physical propagation delay across network links.
+
+Jitter: Random variation added to latency on each packet, drawn uniformly from [-jitter, +jitter]. Models the unpredictable queuing delays in real routers.
+
+Packet Loss: Percentage probability that any given packet is silently dropped in transit. Each packet independently rolls against this threshold. Models congestion-induced drops, buffer overflows, and wireless interference.
+
+Routing: When a packet must traverse multiple hops, the simulator uses Breadth-First Search (BFS) on the topology graph to find the shortest path. If no path exists between source and destination (disconnected topology), the send fails with a "NO ROUTE" error.
+
+
+Slide 7: Protocol Behavior Comparison
+
+Under identical network conditions (e.g., 15% packet loss, 150ms latency):
+
+TCP Behavior:
+- Performs full 3-way handshake before sending data
+- Retransmits dropped packets reliably
+- On each drop: congestion window collapses, adding 600ms+ penalty delay to subsequent packets
+- Throughput: Sawtooth wave pattern — crashes on loss, slowly recovers, crashes again
+- Overhead: High (handshake packets + ACKs + retransmissions + congestion delays)
+
+UDP Behavior:
+- No handshake, sends immediately
+- Dropped packets are permanently lost — no retransmission
+- Throughput: Flat, constant line — UDP never slows down
+- But Delivery Rate drops below 100% — data integrity is compromised
+- Overhead: Minimal (no ACKs, no state tracking)
+
+RUDP Behavior:
+- Retransmits dropped packets immediately via ARQ
+- No congestion window penalty — maintains full send rate after retransmission
+- Throughput: Stable, consistently higher than TCP under loss
+- Delivery Rate: Near 100% (like TCP, unlike UDP)
+- Overhead: Moderate (ACKs exist, but no handshake overhead or backoff penalties)
+
+
+Slide 8: Dashboard and Visualization
+
+The web simulator provides four analysis views:
+
+1. Interactive Topology Canvas: Drag-and-drop network nodes with animated packet dots traveling along edges in real time. Color-coded by packet type — blue for SYN, green for SYN-ACK, purple for DATA, teal for ACK, red for dropped.
+
+2. Packet Capture Table: Wireshark-style log showing timestamp, route, flags, sequence number, payload length, and status (SENT/RECV/DROP/RETX) for every packet in the simulation.
+
+3. Telemetry Dashboard: Per-node statistics including average latency, total bytes transferred, packets sent/received/dropped/retransmitted, displayed with real-time sparkline graphs.
+
+4. Network Analysis Panel: Throughput waveform chart showing payload delivery over time (the key visualization for comparing TCP's wave vs UDP's flatline vs RUDP's stability), protocol overhead percentages, retransmission ratios, and delivery rates.
+
+
+Slide 9: Results and Observations
+
+Key findings from simulation testing:
+
+1. At 0% packet loss: All three protocols perform identically. No drops means no retransmission and no congestion penalties.
+
+2. At 10-20% packet loss: TCP throughput begins showing visible oscillation. RUDP maintains near-flat throughput while still delivering 100% of data. UDP throughput stays flat but 10-20% of data is permanently lost.
+
+3. At 30-50% packet loss: TCP throughput collapses dramatically — the congestion backoff cascade causes massive idle periods. RUDP continues operating with only minor throughput reduction from retransmission time. UDP maintains raw speed but loses a third to half of all data.
+
+4. Header Overhead: With 2048-byte payloads and 32-byte headers, overhead is approximately 1.5%. With smaller payloads, overhead increases proportionally.
+
+5. Retransmission Ratio: Directly correlates with configured packet loss percentage. TCP and RUDP show similar retransmission counts, but TCP's throughput is lower because it adds delay penalties on top of the retransmissions.
+
+
+Slide 10: Conclusion and Future Work
+
+Conclusions:
+- RUDP successfully bridges the gap between TCP's reliability and UDP's performance
+- Under adverse network conditions, RUDP delivers data with the same integrity guarantees as TCP while maintaining throughput closer to UDP
+- The interactive simulator effectively demonstrates these differences through real-time visual comparison
+- The XOR checksum, sequence numbering, and Stop-and-Wait ARQ together provide a minimal but complete reliability layer
+
+Future Work:
+- Implement Sliding Window protocol (Go-Back-N or Selective Repeat) to replace Stop-and-Wait for higher throughput
+- Add dynamic congestion control that adapts more intelligently than TCP's binary halving
+- Port the simulator to use WebSockets for actual machine-to-machine protocol testing over real networks
+- Implement Forward Error Correction (FEC) to reduce retransmission frequency
+
+References:
+[1] Postel, J. (1981). "User Datagram Protocol". RFC 768. IETF.
+[2] Information Sciences Institute (1981). "Transmission Control Protocol". RFC 793. IETF.
+[3] Bova, T., Krivoruchka, T. (1999). "Reliable UDP Protocol". Internet Draft. IETF.
+[4] Kurose, J.F., Ross, K.W. "Computer Networking: A Top-Down Approach". Pearson Education.
+[5] Stevens, W.R. (1994). "TCP/IP Illustrated, Volume 1". Addison-Wesley.

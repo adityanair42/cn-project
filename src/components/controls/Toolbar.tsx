@@ -20,11 +20,8 @@ export function Toolbar() {
   const [showSend, setShowSend] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
-  // Custom payload mapped to size slider for testing variations easily
   const [sendTarget, setSendTarget] = useState('');
   const [payloadSize, setPayloadSize] = useState(128);
-
-  // Generate a dummy payload quickly
   const sendPayload = 'X'.repeat(payloadSize);
 
   const handleAddNode = () => addNode(100 + Math.random() * 400, 100 + Math.random() * 300);
@@ -37,11 +34,7 @@ export function Toolbar() {
 
   const targets = nodes.filter((n) => n.id !== selectedNodeId);
 
-  // Derived Congestion calculation (0 - 100 scale) back to exact metrics
-  const getCongestionLevel = () => {
-    // We'll base the master "congestion" % roughly on packet loss (max 50% = 100 on slider)
-    return Math.min(100, Math.round((config.packetLossPercent / 50) * 100));
-  };
+  const getCongestionLevel = () => Math.min(100, Math.round((config.packetLossPercent / 50) * 100));
   
   const handleCongestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value); // 0 to 100
@@ -142,7 +135,7 @@ export function Toolbar() {
           <div className="absolute top-full mt-2 right-0" style={{ width: 340, background: '#1a1d28', border: '1px solid #252836', borderRadius: 12, padding: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#e5e7eb', marginBottom: 14 }}>Simulation Engine</div>
             
-            {/* Global Congestion Slider */}
+
             <div style={{ marginBottom: 20, padding: 12, background: '#0f1117', borderRadius: 8, border: '1px solid #1e2030' }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 8 }}>
                 <span style={{ fontSize: 11, color: '#e5e7eb', fontWeight: 600, letterSpacing: '0.04em' }}>Network Congestion / Noise</span>
